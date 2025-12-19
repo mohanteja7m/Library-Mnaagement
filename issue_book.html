@@ -1,0 +1,302 @@
+{% extends "base.html" %}
+
+{% block title %}Issue Book - Library System{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card mb-4">
+                <div class="card-header bg-white">
+                    <h4 class="mb-0"><i class="bi bi-arrow-up-circle me-2"></i>Issue Book</h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('issue_book') }}" id="issueForm">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Select Member *</label>
+                                <select class="form-select" name="member_id" id="memberSelect" required>
+                                    <option value="">Choose a member...</option>
+                                    {% for member in members %}
+                                    <option value="{{ member.member_id }}" 
+                                            data-email="{{ member.email }}"
+                                            data-phone="{{ member.phone }}"
+                                            data-books="{{ member.total_books_issued }}"
+                                            data-fine="{{ member.fine_amount }}">
+                                        {{ member.member_code }} - {{ member.full_name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Select Book *</label>
+                                <select class="form-select" name="book_id" id="bookSelect" required>
+                                    <option value="">Choose a book...</option>
+                                    {% for book in books %}
+                                    <option value="{{ book.book_id }}"
+                                            data-isbn="{{ book.isbn }}"
+                                            data-author="{{ book.author }}"
+                                            data-copies="{{ book.available_copies }}"
+                                            data-price="{{ book.price }}">
+                                        {{ book.title }} (Available: {{ book.available_copies }})
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Member Details Card -->
+                        <div class="card mb-3" id="memberDetailsCard" style="display: none;">
+                            <div class="card-body">
+                                <h6 class="card-title">Member Information</h6>
+                                <div class="row">
+                                    <div class="col-md-3">
+                                        <small class="text-muted d-block">Email</small>
+                                        <strong id="memberEmail">-</strong>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <small class="text-muted d-block">Phone</small>
+                                        <strong id="memberPhone">-</strong>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <small class="text-muted d-block">Books Issued</small>
+                                        <span class="badge bg-dark" id="memberBooks">0</span>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <small class="text-muted d-block">Pending Fine</small>
+                                        <span class="badge bg-danger" id="memberFine">₹0</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Book Details Card -->
+                        <div class="card mb-3" id="bookDetailsCard" style="display: none;">
+                            <div class="card-body">
+                                <h6 class="card-title">Book Information</h6>
+                                <div class="row">
+                                    <div class="col-md-3">
+                                        <small class="text-muted d-block">ISBN</small>
+                                        <strong id="bookIsbn">-</strong>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <small class="text-muted d-block">Author</small>
+                                        <strong id="bookAuthor">-</strong>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <small class="text-muted d-block">Available Copies</small>
+                                        <span class="badge bg-success" id="bookCopies">0</span>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <small class="text-muted d-block">Price</small>
+                                        <strong id="bookPrice">₹0</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Issue Details -->
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Issue Date</label>
+                                <input type="date" class="form-control" 
+                                       value="{{ current_date }}" 
+                                       readonly>
+                                <small class="text-muted">Today's date</small>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Due Date</label>
+                                <input type="date" class="form-control" 
+                                       value="{{ due_date }}" 
+                                       readonly>
+                                <small class="text-muted">Due in 14 days</small>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Issued By</label>
+                                <input type="text" class="form-control" 
+                                       value="{{ current_user.full_name }}" 
+                                       readonly>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Notes (Optional)</label>
+                            <textarea class="form-control" name="notes" rows="2" 
+                                      placeholder="Any special instructions or notes..."></textarea>
+                        </div>
+
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle me-2"></i>
+                            <strong>Note:</strong> Books must be returned within 14 days. 
+                            Late returns will incur a fine of ₹2 per day.
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg" id="issueBtn">
+                                <i class="bi bi-check-circle me-2"></i>Issue Book
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <!-- Recently Issued Books -->
+            <div class="card mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>Recently Issued</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        {% for trans in recent_transactions %}
+                        <div class="list-group-item">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">{{ trans.book.title|truncate(30) }}</h6>
+                                <small class="text-muted">{{ trans.issue_date.strftime('%d/%m') }}</small>
+                            </div>
+                            <p class="mb-1">
+                                <small>To: {{ trans.member.full_name }}</small>
+                            </p>
+                            <small class="text-muted">
+                                Due: {{ trans.due_date.strftime('%d/%m/%Y') }}
+                            </small>
+                        </div>
+                        {% else %}
+                        <div class="list-group-item text-center text-muted py-4">
+                            <i class="bi bi-book display-6 d-block mb-2"></i>
+                            No recent issues
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Stats -->
+            <div class="card">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="bi bi-graph-up me-2"></i>Quick Stats</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6 mb-3">
+                            <div class="p-3 bg-light rounded">
+                                <h4 class="text-primary">{{ members|length }}</h4>
+                                <small class="text-muted">Active Members</small>
+                            </div>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <div class="p-3 bg-light rounded">
+                                <h4 class="text-success">{{ available_books }}</h4>
+                                <small class="text-muted">Available Books</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="p-3 bg-light rounded">
+                                <h4 class="text-warning">{{ today_issues }}</h4>
+                                <small class="text-muted">Issued Today</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="p-3 bg-light rounded">
+                                <h4 class="text-danger">{{ overdue_count }}</h4>
+                                <small class="text-muted">Overdue Books</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Get current date for display
+const today = new Date().toISOString().split('T')[0];
+const dueDate = new Date();
+dueDate.setDate(dueDate.getDate() + 14);
+const dueDateStr = dueDate.toISOString().split('T')[0];
+
+// Update member details when selected
+document.getElementById('memberSelect').addEventListener('change', function() {
+    const selectedOption = this.options[this.selectedIndex];
+    if (selectedOption.value) {
+        document.getElementById('memberEmail').textContent = selectedOption.dataset.email;
+        document.getElementById('memberPhone').textContent = selectedOption.dataset.phone || '-';
+        document.getElementById('memberBooks').textContent = selectedOption.dataset.books;
+        document.getElementById('memberFine').textContent = '₹' + selectedOption.dataset.fine;
+        document.getElementById('memberDetailsCard').style.display = 'block';
+        
+        // Check if member has overdue fine
+        if (parseFloat(selectedOption.dataset.fine) > 0) {
+            document.getElementById('memberFine').className = 'badge bg-danger';
+        }
+    } else {
+        document.getElementById('memberDetailsCard').style.display = 'none';
+    }
+});
+
+// Update book details when selected
+document.getElementById('bookSelect').addEventListener('change', function() {
+    const selectedOption = this.options[this.selectedIndex];
+    if (selectedOption.value) {
+        document.getElementById('bookIsbn').textContent = selectedOption.dataset.isbn;
+        document.getElementById('bookAuthor').textContent = selectedOption.dataset.author;
+        document.getElementById('bookCopies').textContent = selectedOption.dataset.copies;
+        document.getElementById('bookPrice').textContent = '₹' + (selectedOption.dataset.price || '0');
+        document.getElementById('bookDetailsCard').style.display = 'block';
+        
+        // Disable issue button if no copies available
+        const availableCopies = parseInt(selectedOption.dataset.copies);
+        if (availableCopies <= 0) {
+            document.getElementById('issueBtn').disabled = true;
+            document.getElementById('issueBtn').innerHTML = '<i class="bi bi-x-circle me-2"></i>Not Available';
+        } else {
+            document.getElementById('issueBtn').disabled = false;
+            document.getElementById('issueBtn').innerHTML = '<i class="bi bi-check-circle me-2"></i>Issue Book';
+        }
+    } else {
+        document.getElementById('bookDetailsCard').style.display = 'none';
+    }
+});
+
+// Form submission confirmation
+document.getElementById('issueForm').addEventListener('submit', function(e) {
+    const memberSelect = document.getElementById('memberSelect');
+    const bookSelect = document.getElementById('bookSelect');
+    
+    if (!memberSelect.value || !bookSelect.value) {
+        e.preventDefault();
+        alert('Please select both a member and a book.');
+        return;
+    }
+    
+    // Additional validation
+    const memberFine = parseFloat(memberSelect.options[memberSelect.selectedIndex].dataset.fine);
+    if (memberFine > 100) {
+        const confirmIssue = confirm(`This member has ₹${memberFine} in pending fines. Are you sure you want to issue a book?`);
+        if (!confirmIssue) {
+            e.preventDefault();
+            return;
+        }
+    }
+    
+    const availableCopies = parseInt(bookSelect.options[bookSelect.selectedIndex].dataset.copies);
+    if (availableCopies <= 0) {
+        e.preventDefault();
+        alert('This book is not available for issue.');
+        return;
+    }
+});
+
+// Check URL for book_id parameter
+const urlParams = new URLSearchParams(window.location.search);
+const bookId = urlParams.get('book_id');
+if (bookId) {
+    setTimeout(() => {
+        document.getElementById('bookSelect').value = bookId;
+        document.getElementById('bookSelect').dispatchEvent(new Event('change'));
+    }, 500);
+}
+</script>
+{% endblock %}

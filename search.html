@@ -1,0 +1,338 @@
+{% extends "base.html" %}
+
+{% block title %}Search Books - Library System{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2><i class="bi bi-search me-2"></i>Search Books</h2>
+            <p class="text-muted">Find books by title, author, ISBN, or category</p>
+        </div>
+    </div>
+
+    <!-- Search Form -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" action="{{ url_for('search') }}" class="row g-3">
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <input type="text" class="form-control form-control-lg" 
+                               name="q" value="{{ query }}" 
+                               placeholder="Search for books..." required>
+                        <button class="btn btn-primary btn-lg" type="submit">
+                            <i class="bi bi-search"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select form-select-lg" name="search_by">
+                        <option value="title" {% if search_by == 'title' %}selected{% endif %}>Title</option>
+                        <option value="author" {% if search_by == 'author' %}selected{% endif %}>Author</option>
+                        <option value="isbn" {% if search_by == 'isbn' %}selected{% endif %}>ISBN</option>
+                        <option value="publisher" {% if search_by == 'publisher' %}selected{% endif %}>Publisher</option>
+                        <option value="category" {% if search_by == 'category' %}selected{% endif %}>Category</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select form-select-lg" name="sort_by">
+                        <option value="title" {% if sort_by == 'title' %}selected{% endif %}>Title A-Z</option>
+                        <option value="title_desc" {% if sort_by == 'title_desc' %}selected{% endif %}>Title Z-A</option>
+                        <option value="author" {% if sort_by == 'author' %}selected{% endif %}>Author A-Z</option>
+                        <option value="year_desc" {% if sort_by == 'year_desc' %}selected{% endif %}>Newest First</option>
+                        <option value="year_asc" {% if sort_by == 'year_asc' %}selected{% endif %}>Oldest First</option>
+                    </select>
+                </div>
+                
+                <div class="col-md-4">
+                    <select class="form-select" name="category">
+                        <option value="">All Categories</option>
+                        {% for category in categories %}
+                        <option value="{{ category.category_name }}" 
+                                {% if selected_category == category.category_name %}selected{% endif %}>
+                            {{ category.category_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="available_only" 
+                               id="availableOnly" {% if available_only %}checked{% endif %}>
+                        <label class="form-check-label" for="availableOnly">
+                            Show only available books
+                        </label>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-search me-2"></i>Search
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Search Results -->
+    <div class="card">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                {% if query %}
+                Search Results for "{{ query }}"
+                {% else %}
+                Search Books
+                {% endif %}
+            </h5>
+            <div>
+                <span class="badge bg-primary">{{ results|length }} results</span>
+            </div>
+        </div>
+        
+        <div class="card-body">
+            {% if query %}
+                {% if results %}
+                    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+                        {% for book in results %}
+                        <div class="col">
+                            <div class="card h-100 border-0 shadow-sm hover-card">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <h6 class="card-title mb-0">{{ book.title|truncate(40) }}</h6>
+                                        <span class="badge bg-info">{{ book.category or 'General' }}</span>
+                                    </div>
+                                    <p class="card-text text-muted small mb-2">
+                                        <i class="bi bi-person me-1"></i>{{ book.author }}
+                                    </p>
+                                    <p class="card-text small mb-3">
+                                        <i class="bi bi-journal-text me-1"></i>
+                                        <strong>ISBN:</strong> {{ book.isbn }}
+                                    </p>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            {% if book.available_copies > 0 %}
+                                            <span class="badge bg-success">
+                                                {{ book.available_copies }} available
+                                            </span>
+                                            {% else %}
+                                            <span class="badge bg-danger">Out of stock</span>
+                                            {% endif %}
+                                        </div>
+                                        <div class="btn-group btn-group-sm">
+                                            <button class="btn btn-outline-primary" 
+                                                    onclick="viewBook({{ book.book_id }})">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                            {% if book.available_copies > 0 %}
+                                            <a href="{{ url_for('issue_book') }}?book_id={{ book.book_id }}"
+                                               class="btn btn-outline-success">
+                                                <i class="bi bi-arrow-up-circle"></i>
+                                            </a>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="card-footer bg-white border-top-0 pt-0">
+                                    <small class="text-muted">
+                                        Added: {{ book.date_added.strftime('%d/%m/%Y') }}
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="bi bi-search display-1 text-muted mb-3"></i>
+                        <h4 class="text-muted">No results found</h4>
+                        <p class="text-muted">Try adjusting your search criteria</p>
+                        <a href="{{ url_for('search') }}" class="btn btn-primary">
+                            <i class="bi bi-arrow-clockwise me-2"></i>Reset Search
+                        </a>
+                    </div>
+                {% endif %}
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-search display-1 text-primary mb-3"></i>
+                    <h4 class="mb-3">Search Library Catalog</h4>
+                    <p class="text-muted mb-4">
+                        Enter a search term to find books in the library.<br>
+                        You can search by title, author, ISBN, or category.
+                    </p>
+                    
+                    <!-- Quick Search Examples -->
+                    <div class="mt-4">
+                        <h6 class="mb-3">Quick Search Examples:</h6>
+                        <div class="d-flex flex-wrap justify-content-center gap-2">
+                            <a href="{{ url_for('search') }}?q=python&search_by=title" 
+                               class="btn btn-outline-primary btn-sm">
+                                Python Programming
+                            </a>
+                            <a href="{{ url_for('search') }}?q=computer&search_by=category" 
+                               class="btn btn-outline-primary btn-sm">
+                                Computer Science
+                            </a>
+                            <a href="{{ url_for('search') }}?q=2023&search_by=year" 
+                               class="btn btn-outline-primary btn-sm">
+                                2023 Publications
+                            </a>
+                            <a href="{{ url_for('search') }}?q=available&available_only=on" 
+                               class="btn btn-outline-success btn-sm">
+                                Available Now
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+        
+        {% if results %}
+        <div class="card-footer bg-white">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <small class="text-muted">
+                        Showing {{ results|length }} of {{ total_books }} books
+                    </small>
+                </div>
+                <div class="col-md-6 text-end">
+                    <button class="btn btn-outline-secondary btn-sm" onclick="toggleView('grid')">
+                        <i class="bi bi-grid"></i> Grid
+                    </button>
+                    <button class="btn btn-outline-secondary btn-sm" onclick="toggleView('list')">
+                        <i class="bi bi-list"></i> List
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.hover-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.hover-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+</style>
+
+<script>
+// View book details
+function viewBook(bookId) {
+    fetch(`/api/books/${bookId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const book = data.book;
+                const modalContent = `
+                    <div class="modal fade" id="viewBookModal" tabindex="-1">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">${book.title}</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <div class="text-center mb-3">
+                                                <i class="bi bi-book display-1 text-primary"></i>
+                                            </div>
+                                            ${book.available_copies > 0 ? 
+                                                `<a href="/issue_book?book_id=${bookId}" class="btn btn-success w-100">
+                                                    <i class="bi bi-arrow-up-circle me-1"></i>Issue This Book
+                                                </a>` : 
+                                                `<button class="btn btn-secondary w-100" disabled>
+                                                    <i class="bi bi-x-circle me-1"></i>Not Available
+                                                </button>`}
+                                        </div>
+                                        <div class="col-md-8">
+                                            <h5>${book.title}</h5>
+                                            <p class="text-muted">by ${book.author}</p>
+                                            <hr>
+                                            <div class="row">
+                                                <div class="col-6">
+                                                    <small class="text-muted d-block">ISBN</small>
+                                                    <strong>${book.isbn}</strong>
+                                                </div>
+                                                <div class="col-6">
+                                                    <small class="text-muted d-block">Category</small>
+                                                    <span class="badge bg-info">${book.category || 'N/A'}</span>
+                                                </div>
+                                            </div>
+                                            <div class="row mt-3">
+                                                <div class="col-6">
+                                                    <small class="text-muted d-block">Publisher</small>
+                                                    <strong>${book.publisher || 'N/A'}</strong>
+                                                </div>
+                                                <div class="col-6">
+                                                    <small class="text-muted d-block">Year</small>
+                                                    <strong>${book.publication_year || 'N/A'}</strong>
+                                                </div>
+                                            </div>
+                                            <div class="row mt-3">
+                                                <div class="col-6">
+                                                    <small class="text-muted d-block">Available Copies</small>
+                                                    <span class="badge ${book.available_copies > 0 ? 'bg-success' : 'bg-danger'}">
+                                                        ${book.available_copies}
+                                                    </span>
+                                                </div>
+                                                <div class="col-6">
+                                                    <small class="text-muted d-block">Price</small>
+                                                    <strong>₹${book.price || '0.00'}</strong>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                const modalDiv = document.createElement('div');
+                modalDiv.innerHTML = modalContent;
+                document.body.appendChild(modalDiv);
+                
+                const modal = new bootstrap.Modal(document.getElementById('viewBookModal'));
+                modal.show();
+                
+                // Remove modal from DOM after it's hidden
+                modalDiv.querySelector('.modal').addEventListener('hidden.bs.modal', function () {
+                    document.body.removeChild(modalDiv);
+                });
+            }
+        })
+        .catch(error => console.error('Error:', error));
+}
+
+// Toggle view between grid and list
+function toggleView(viewType) {
+    const resultsContainer = document.querySelector('.row.row-cols-1');
+    if (!resultsContainer) return;
+    
+    if (viewType === 'list') {
+        resultsContainer.className = 'list-group';
+        const cards = resultsContainer.querySelectorAll('.col');
+        cards.forEach(card => {
+            card.className = 'list-group-item';
+        });
+    } else {
+        resultsContainer.className = 'row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4';
+        const cards = resultsContainer.querySelectorAll('.list-group-item');
+        cards.forEach(card => {
+            card.className = 'col';
+        });
+    }
+}
+
+// Initialize search if there's a query
+{% if query %}
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelector('input[name="q"]').focus();
+});
+{% endif %}
+</script>
+{% endblock %}

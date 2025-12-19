@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Library Management System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <style>
+        .hero-section {
+            background: linear-gradient(135deg, #2c3e50, #4a6491);
+            min-height: 100vh;
+            color: white;
+        }
+        
+        .feature-icon {
+            width: 60px;
+            height: 60px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        
+        .stat-card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .login-box {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+<body>
+    <!-- Hero Section -->
+    <div class="hero-section">
+        <nav class="navbar navbar-expand-lg navbar-dark">
+            <div class="container">
+                <a class="navbar-brand" href="#">
+                    <i class="bi bi-book me-2"></i>
+                    <span class="fw-bold">Library System</span>
+                </a>
+                <div class="navbar-nav">
+                    <a href="{{ url_for('login') }}" class="btn btn-light">
+                        <i class="bi bi-box-arrow-in-right me-2"></i>Login
+                    </a>
+                </div>
+            </div>
+        </nav>
+        
+        <div class="container py-5">
+            <div class="row align-items-center">
+                <div class="col-lg-6">
+                    <h1 class="display-4 fw-bold mb-4">
+                        Digital Library Management System
+                    </h1>
+                    <p class="lead mb-4 opacity-75">
+                        A comprehensive solution for managing library operations, 
+                        tracking books, members, and transactions efficiently.
+                    </p>
+                    
+                    <div class="row g-4 mb-5">
+                        <div class="col-md-4">
+                            <div class="stat-card text-center">
+                                <h3 class="mb-0" id="bookCount">0</h3>
+                                <small>Books in Library</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="stat-card text-center">
+                                <h3 class="mb-0" id="memberCount">0</h3>
+                                <small>Active Members</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="stat-card text-center">
+                                <h3 class="mb-0" id="issueCount">0</h3>
+                                <small>Books Issued</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex gap-3">
+                        <a href="{{ url_for('login') }}" class="btn btn-primary btn-lg">
+                            <i class="bi bi-box-arrow-in-right me-2"></i>Login to System
+                        </a>
+                        <a href="#features" class="btn btn-outline-light btn-lg">
+                            <i class="bi bi-info-circle me-2"></i>Learn More
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="col-lg-6">
+                    <div class="login-box p-5">
+                        <h3 class="text-center mb-4">System Login</h3>
+                        <form method="POST" action="{{ url_for('login') }}">
+                            <div class="mb-3">
+                                <label class="form-label">Username</label>
+                                <input type="text" class="form-control" name="username" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Password</label>
+                                <input type="password" class="form-control" name="password" required>
+                            </div>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary btn-lg">
+                                    <i class="bi bi-box-arrow-in-right me-2"></i>Sign In
+                                </button>
+                            </div>
+                        </form>
+                        
+                        <hr class="my-4">
+                        
+                        <div class="text-center">
+                            <p class="text-muted mb-2">Demo Credentials</p>
+                            <div class="alert alert-info small">
+                                <strong>Username:</strong> admin<br>
+                                <strong>Password:</strong> admin123
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Features Section -->
+    <div class="container py-5" id="features">
+        <h2 class="text-center mb-5">System Features</h2>
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="text-center p-4">
+                    <div class="feature-icon mx-auto">
+                        <i class="bi bi-book text-primary fs-3"></i>
+                    </div>
+                    <h4>Book Management</h4>
+                    <p class="text-muted">
+                        Add, edit, delete and search books with ISBN, author, category filters.
+                    </p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="text-center p-4">
+                    <div class="feature-icon mx-auto">
+                        <i class="bi bi-people text-primary fs-3"></i>
+                    </div>
+                    <h4>Member Management</h4>
+                    <p class="text-muted">
+                        Manage library members, track their activity, and monitor fines.
+                    </p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="text-center p-4">
+                    <div class="feature-icon mx-auto">
+                        <i class="bi bi-arrow-left-right text-primary fs-3"></i>
+                    </div>
+                    <h4>Issue/Return System</h4>
+                    <p class="text-muted">
+                        Easy book issuing and returning with automatic fine calculation.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Footer -->
+    <footer class="bg-dark text-white py-4">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>Library Management System</h5>
+                    <p class="text-muted">
+                        B.Com Computer Applications Project<br>
+                        Acharya Nagarjuna University
+                    </p>
+                </div>
+                <div class="col-md-6 text-end">
+                    <p class="text-muted mb-0">
+                        &copy; 2025 Library Management System<br>
+                        Developed for Academic Project
+                    </p>
+                </div>
+            </div>
+        </div>
+    </footer>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Fetch stats from API
+        fetch('/api/stats')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('bookCount').textContent = data.stats.total_books;
+                    document.getElementById('memberCount').textContent = data.stats.total_members;
+                    document.getElementById('issueCount').textContent = data.stats.issued_books;
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching stats:', error);
+                // Set default values
+                document.getElementById('bookCount').textContent = '50+';
+                document.getElementById('memberCount').textContent = '100+';
+                document.getElementById('issueCount').textContent = '25+';
+            });
+    </script>
+</body>
+</html>

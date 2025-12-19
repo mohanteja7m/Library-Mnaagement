@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+
+{% block title %}My Profile - Library System{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-lg-3">
+            <div class="card mb-4">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="bi bi-person-circle display-1 text-primary"></i>
+                    </div>
+                    <h4>{{ current_user.full_name }}</h4>
+                    <p class="text-muted">{{ current_user.role }}</p>
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editProfileModal">
+                            <i class="bi bi-pencil me-2"></i>Edit Profile
+                        </button>
+                        <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#changePasswordModal">
+                            <i class="bi bi-key me-2"></i>Change Password
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">Account Information</h6>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-5">Username</dt>
+                        <dd class="col-sm-7">{{ current_user.username }}</dd>
+                        
+                        <dt class="col-sm-5">Email</dt>
+                        <dd class="col-sm-7">{{ current_user.email }}</dd>
+                        
+                        <dt class="col-sm-5">Phone</dt>
+                        <dd class="col-sm-7">{{ current_user.phone or 'Not set' }}</dd>
+                        
+                        <dt class="col-sm-5">Role</dt>
+                        <dd class="col-sm-7">
+                            <span class="badge bg-{{ 'primary' if current_user.role == 'Admin' else 'info' }}">
+                                {{ current_user.role }}
+                            </span>
+                        </dd>
+                        
+                        <dt class="col-sm-5">Status</dt>
+                        <dd class="col-sm-7">
+                            <span class="badge bg-success">Active</span>
+                        </dd>
+                        
+                        <dt class="col-sm-5">Last Login</dt>
+                        <dd class="col-sm-7">
+                            {% if current_user.last_login %}
+                            {{ current_user.last_login.strftime('%d/%m/%Y %H:%M') }}
+                            {% else %}
+                            Never
+                            {% endif %}
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="col-lg-9">
+            <!-- Statistics -->
+            <div class="row mb-4">
+                <div class="col-md-4">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h6 class="text-uppercase">Books Managed</h6>
+                                    <h2 class="mb-0">{{ stats.total_books }}</h2>
+                                </div>
+                                <i class="bi bi-book display-4 opacity-50"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card bg-success text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h6 class="text-uppercase">Members</h6>
+                                    <h2 class="mb-0">{{ stats.total_members }}</h2>
+                                </div>
+                                <i class="bi bi-people display-4 opacity-50"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card bg-warning text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h6 class="text-uppercase">Issued Today</h6>
+                                    <h2 class="mb-0">{{ stats.today_issues }}</h2>
+                                </div>
+                                <i class="bi bi-arrow-up-circle display-4 opacity-50"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Recent Activity -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Recent Activity</h5>
+                </div>
+                <div class="card-body">
+                    <div class="timeline">
+                        <div class="timeline-item">
+                            <div class="timeline-marker bg-primary"></div>
+                            <div class="timeline-content">
+                                <h6>Logged in successfully</h6>
+                                <p class="text-muted mb-0">Just now</p>
+                            </div>
+                        </div>
+                        <div class="timeline-item">
+                            <div class="timeline-marker bg-success"></div>
+                            <div class="timeline-content">
+                                <h6>Issued book "Python Crash Course"</h6>
+                                <p class="text-muted mb-0">2 hours ago</p>
+                            </div>
+                        </div>
+                        <div class="timeline-item">
+                            <div class="timeline-marker bg-info"></div>
+                            <div class="timeline-content">
+                                <h6>Added new member "John Smith"</h6>
+                                <p class="text-muted mb-0">Yesterday</p>
+                            </div>
+                        </div>
+                        <div class="timeline-item">
+                            <div class="timeline-marker bg-warning"></div>
+                            <div class="timeline-content">
+                                <h6>Generated monthly report</h6>
+                                <p class="text-muted mb-0">2 days ago</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Profile Modal -->
+<div class="modal fade" id="editProfileModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Profile</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Full Name</label>
+                        <input type="text" class="form-control" value="{{ current_user.full_name }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-control" value="{{ current_user.email }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Phone</label>
+                        <input type="tel" class="form-control" value="{{ current_user.phone or '' }}">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Change Password Modal -->
+<div class="modal fade" id="changePasswordModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Change Password</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Current Password</label>
+                        <input type="password" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">New Password</label>
+                        <input type="password" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Confirm New Password</label>
+                        <input type="password" class="form-control" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary">Change Password</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.timeline {
+    position: relative;
+    padding-left: 30px;
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: -30px;
+    top: 0;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+}
+
+.timeline-content {
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 5px;
+}
+</style>
+{% endblock %}

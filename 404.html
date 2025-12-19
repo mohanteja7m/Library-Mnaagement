@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block title %}Page Not Found - Library System{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center align-items-center min-vh-80">
+        <div class="col-md-8 col-lg-6 text-center">
+            <div class="error-page">
+                <h1 class="display-1 text-primary">404</h1>
+                <h2 class="mb-4">Page Not Found</h2>
+                
+                <div class="error-icon mb-4">
+                    <i class="bi bi-emoji-frown display-1 text-muted"></i>
+                </div>
+                
+                <p class="lead text-muted mb-4">
+                    Oops! The page you're looking for seems to have wandered off into the stacks.
+                </p>
+                
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <p class="mb-0">
+                            <i class="bi bi-info-circle text-primary me-2"></i>
+                            The requested URL <code class="text-danger">{{ request.path }}</code> was not found on this server.
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="d-flex flex-column flex-md-row justify-content-center gap-3">
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-primary btn-lg">
+                        <i class="bi bi-house-door me-2"></i>Go to Dashboard
+                    </a>
+                    <a href="javascript:history.back()" class="btn btn-outline-primary btn-lg">
+                        <i class="bi bi-arrow-left me-2"></i>Go Back
+                    </a>
+                    <a href="{{ url_for('search') }}" class="btn btn-outline-success btn-lg">
+                        <i class="bi bi-search me-2"></i>Search Books
+                    </a>
+                </div>
+                
+                <div class="mt-5">
+                    <h5 class="mb-3">Quick Links</h5>
+                    <div class="d-flex flex-wrap justify-content-center gap-2">
+                        <a href="{{ url_for('manage_members') }}" class="btn btn-outline-secondary">
+                            Members
+                        </a>
+                        <a href="{{ url_for('manage_books') }}" class="btn btn-outline-secondary">
+                            Books
+                        </a>
+                        <a href="{{ url_for('issue_book') }}" class="btn btn-outline-secondary">
+                            Issue Book
+                        </a>
+                        <a href="{{ url_for('return_book') }}" class="btn btn-outline-secondary">
+                            Return Book
+                        </a>
+                        <a href="{{ url_for('reports') }}" class="btn btn-outline-secondary">
+                            Reports
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.error-page {
+    padding: 40px 0;
+}
+
+.min-vh-80 {
+    min-height: 80vh;
+}
+
+.error-icon {
+    animation: bounce 2s infinite;
+}
+
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-20px); }
+}
+</style>
+{% endblock %}

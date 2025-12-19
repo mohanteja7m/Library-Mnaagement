@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <h2>Dashboard</h2>
+    <p>Welcome, {{ current_user.full_name }}</p>
+    
+    <div class="row mt-4">
+        <div class="col-md-3">
+            <div class="stat-card card-books">
+                <h4>Total Books</h4>
+                <h2>{{ stats.total_books }}</h2>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card card-members">
+                <h4>Total Members</h4>
+                <h2>{{ stats.total_members }}</h2>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card card-issued">
+                <h4>Issued Books</h4>
+                <h2>{{ stats.issued_books }}</h2>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card card-overdue">
+                <h4>Overdue Books</h4>
+                <h2>{{ stats.overdue_books }}</h2>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Recent Transactions</h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_transactions %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Transaction ID</th>
+                                    <th>Member</th>
+                                    <th>Book</th>
+                                    <th>Issue Date</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for trans in recent_transactions %}
+                                <tr>
+                                    <td>{{ trans.transaction_code }}</td>
+                                    <td>{{ trans.member.full_name }}</td>
+                                    <td>{{ trans.book.title }}</td>
+                                    <td>{{ trans.issue_date }}</td>
+                                    <td>{{ trans.transaction_status }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted">No recent transactions</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <a href="{{ url_for('issue_book') }}" class="btn btn-primary w-100 py-3">
+                                <i class="bi bi-plus-circle"></i> Issue Book
+                            </a>
+                        </div>
+                        <div class="col-md-6">
+                            <a href="{{ url_for('return_book') }}" class="btn btn-success w-100 py-3">
+                                <i class="bi bi-check-circle"></i> Return Book
+                            </a>
+                        </div>
+                        <div class="col-md-6">
+                            <a href="{{ url_for('manage_books') }}" class="btn btn-info w-100 py-3">
+                                <i class="bi bi-book"></i> Add Book
+                            </a>
+                        </div>
+                        <div class="col-md-6">
+                            <a href="{{ url_for('reports') }}" class="btn btn-warning w-100 py-3">
+                                <i class="bi bi-graph-up"></i> Reports
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

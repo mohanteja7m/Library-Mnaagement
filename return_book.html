@@ -1,0 +1,503 @@
+{% extends "base.html" %}
+
+{% block title %}Return Book - Library System{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2><i class="bi bi-arrow-down-circle me-2"></i>Return Book</h2>
+            <p class="text-muted">Process book returns and calculate fines</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Return Form -->
+        <div class="col-lg-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Return Book Form</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('return_book') }}" id="returnForm">
+                        <div class="mb-4">
+                            <label class="form-label">Transaction Code *</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" 
+                                       name="transaction_code" 
+                                       id="transactionCode"
+                                       placeholder="Enter transaction code (e.g., TRN20241201ABC123)"
+                                       required>
+                                <button class="btn btn-outline-secondary" type="button" onclick="simulateScan()">
+                                    <i class="bi bi-upc-scan"></i> Scan
+                                </button>
+                            </div>
+                            <small class="text-muted">Enter the transaction code from the issued receipt</small>
+                        </div>
+
+                        <div class="d-grid gap-2 mb-4">
+                            <button type="button" class="btn btn-primary" onclick="fetchTransaction()" id="fetchBtn">
+                                <i class="bi bi-search me-2"></i>Find Transaction
+                            </button>
+                        </div>
+
+                        <!-- Transaction Details -->
+                        <div id="transactionDetails" style="display: none;">
+                            <!-- Content will be loaded here -->
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Today's Returns & Overdue Books -->
+        <div class="col-lg-6">
+            <!-- Today's Returns -->
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-calendar-check me-2"></i>Today's Returns
+                    </h5>
+                    <span class="badge bg-primary">{{ today_returns|length }}</span>
+                </div>
+                <div class="card-body p-0">
+                    {% if today_returns %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Transaction</th>
+                                    <th>Book</th>
+                                    <th>Member</th>
+                                    <th>Fine</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for trans in today_returns %}
+                                <tr>
+                                    <td><code>{{ trans.transaction_code }}</code></td>
+                                    <td>{{ trans.book.title|truncate(20) }}</td>
+                                    <td>{{ trans.member.full_name }}</td>
+                                    <td>
+                                        {% if trans.fine_amount > 0 %}
+                                        <span class="badge bg-danger">₹{{ "%.2f"|format(trans.fine_amount) }}</span>
+                                        {% else %}
+                                        <span class="badge bg-success">₹0</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-check-circle display-4 text-muted mb-3"></i>
+                        <p class="text-muted mb-0">No returns today</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Overdue Books -->
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-exclamation-triangle me-2"></i>Overdue Books
+                    </h5>
+                    <span class="badge bg-danger">{{ overdue_books|length }}</span>
+                </div>
+                <div class="card-body p-0">
+                    {% if overdue_books %}
+                    <div class="list-group list-group-flush">
+                        {% for trans in overdue_books %}
+                        {% set days_overdue = (current_date - trans.due_date).days %}
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6 class="mb-1">{{ trans.book.title|truncate(25) }}</h6>
+                                    <small class="text-muted">
+                                        Issued to: {{ trans.member.full_name }}
+                                    </small>
+                                    <div class="mt-1">
+                                        <small class="text-muted">
+                                            Due: {{ trans.due_date.strftime('%d/%m/%Y') }}
+                                        </small>
+                                        <span class="badge bg-danger ms-2">
+                                            Overdue: {{ days_overdue }} days
+                                        </span>
+                                    </div>
+                                </div>
+                                <button class="btn btn-sm btn-outline-danger" 
+                                        onclick="useTransactionCode('{{ trans.transaction_code }}')">
+                                    Use This
+                                </button>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-check-circle display-4 text-success mb-3"></i>
+                        <p class="text-success mb-0">No overdue books</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Fetch transaction details - WORKING VERSION
+function fetchTransaction() {
+    const transactionCode = document.getElementById('transactionCode').value.trim();
+    
+    if (!transactionCode) {
+        alert('Please enter a transaction code');
+        return;
+    }
+    
+    // Show loading state
+    const fetchBtn = document.getElementById('fetchBtn');
+    const originalText = fetchBtn.innerHTML;
+    fetchBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Searching...';
+    fetchBtn.disabled = true;
+    
+    const detailsDiv = document.getElementById('transactionDetails');
+    detailsDiv.style.display = 'block';
+    detailsDiv.innerHTML = `
+        <div class="text-center py-4">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Fetching transaction details...</p>
+        </div>
+    `;
+    
+    // Make API call to get transaction details
+    fetch(`/api/transactions/${transactionCode}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                const trans = data.transaction;
+                
+                // Format dates
+                const formatDate = (dateStr) => {
+                    const date = new Date(dateStr);
+                    return date.toLocaleDateString('en-GB', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric'
+                    });
+                };
+                
+                // Check if overdue
+                const isOverdue = trans.days_overdue > 0;
+                
+                // Success response
+                detailsDiv.innerHTML = `
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <h5 class="card-title">Transaction Found</h5>
+                            
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <small class="text-muted d-block">Transaction Code</small>
+                                    <strong><code>${trans.transaction_code}</code></strong>
+                                </div>
+                                <div class="col-md-6">
+                                    <small class="text-muted d-block">Status</small>
+                                    <span class="badge bg-warning">${trans.status}</span>
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <small class="text-muted d-block">Member</small>
+                                    <strong>${trans.member_name}</strong>
+                                    <small class="d-block text-muted">${trans.member_code}</small>
+                                </div>
+                                <div class="col-md-6">
+                                    <small class="text-muted d-block">Book</small>
+                                    <strong>${trans.book_title}</strong>
+                                    <small class="d-block text-muted">${trans.book_isbn}</small>
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <small class="text-muted d-block">Issue Date</small>
+                                    <strong>${formatDate(trans.issue_date)}</strong>
+                                </div>
+                                <div class="col-md-4">
+                                    <small class="text-muted d-block">Due Date</small>
+                                    <strong>${formatDate(trans.due_date)}</strong>
+                                </div>
+                                <div class="col-md-4">
+                                    <small class="text-muted d-block">Days Overdue</small>
+                                    <strong class="${isOverdue ? 'text-danger' : 'text-success'}">
+                                        ${isOverdue ? trans.days_overdue + ' days' : '0 days (On time)'}
+                                    </strong>
+                                </div>
+                            </div>
+                            
+                            ${isOverdue ? `
+                            <div class="alert alert-warning">
+                                <i class="bi bi-exclamation-triangle me-2"></i>
+                                <strong>Late Return!</strong> 
+                                Fine amount: ₹${trans.fine_amount.toFixed(2)} (₹2 per day)
+                            </div>` : `
+                            <div class="alert alert-success">
+                                <i class="bi bi-check-circle me-2"></i>
+                                <strong>On Time!</strong> 
+                                No fine will be charged.
+                            </div>`}
+                            
+                            <div class="text-center">
+                                <button type="submit" class="btn btn-success btn-lg">
+                                    <i class="bi bi-check-circle me-2"></i>Confirm Return
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                // Error response from API
+                detailsDiv.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-circle me-2"></i>
+                        <strong>Error:</strong> ${data.error}
+                    </div>
+                    <div class="text-center">
+                        <button type="button" class="btn btn-primary" onclick="fetchTransaction()">
+                            <i class="bi bi-search me-2"></i>Try Again
+                        </button>
+                    </div>
+                `;
+            }
+            
+            // Reset button
+            fetchBtn.innerHTML = originalText;
+            fetchBtn.disabled = false;
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            // Fallback to simulation if API fails
+            simulateTransactionDetails(transactionCode);
+            
+            // Reset button
+            fetchBtn.innerHTML = originalText;
+            fetchBtn.disabled = false;
+        });
+}
+
+// Fallback function for simulation
+function simulateTransactionDetails(transactionCode) {
+    const detailsDiv = document.getElementById('transactionDetails');
+    
+    // Calculate dates for demo
+    const today = new Date();
+    const dueDate = new Date();
+    dueDate.setDate(today.getDate() - 5); // 5 days overdue for demo
+    
+    const isOverdue = today > dueDate;
+    const daysOverdue = isOverdue ? Math.floor((today - dueDate) / (1000 * 60 * 60 * 24)) : 0;
+    const fineAmount = isOverdue ? daysOverdue * 2 : 0;
+    
+    // Format dates
+    const formatDate = (date) => {
+        return date.toLocaleDateString('en-GB', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+        });
+    };
+    
+    // Success response
+    detailsDiv.innerHTML = `
+        <div class="card mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Transaction Found (Demo Mode)</h5>
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <small class="text-muted d-block">Transaction Code</small>
+                        <strong><code>${transactionCode}</code></strong>
+                    </div>
+                    <div class="col-md-6">
+                        <small class="text-muted d-block">Status</small>
+                        <span class="badge bg-warning">Issued</span>
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <small class="text-muted d-block">Member</small>
+                        <strong>Sai Iaswarya Durga</strong>
+                        <small class="d-block text-muted">MEM${today.getFullYear()}${String(today.getMonth()+1).padStart(2,'0')}${String(today.getDate()).padStart(2,'0')}001</small>
+                    </div>
+                    <div class="col-md-6">
+                        <small class="text-muted d-block">Book</small>
+                        <strong>Effective Python: 90 Specific Ways to Write Better Python</strong>
+                        <small class="d-block text-muted">ISBN: 978-0134685991</small>
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <small class="text-muted d-block">Issue Date</small>
+                        <strong>${formatDate(new Date(today.getTime() - 19*24*60*60*1000))}</strong>
+                    </div>
+                    <div class="col-md-4">
+                        <small class="text-muted d-block">Due Date</small>
+                        <strong>${formatDate(dueDate)}</strong>
+                    </div>
+                    <div class="col-md-4">
+                        <small class="text-muted d-block">Days Overdue</small>
+                        <strong class="${isOverdue ? 'text-danger' : 'text-success'}">
+                            ${isOverdue ? daysOverdue + ' days' : '0 days (On time)'}
+                        </strong>
+                    </div>
+                </div>
+                
+                ${isOverdue ? `
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <strong>Late Return!</strong> 
+                    Fine amount: ₹${fineAmount.toFixed(2)} (₹2 per day)
+                </div>` : `
+                <div class="alert alert-success">
+                    <i class="bi bi-check-circle me-2"></i>
+                    <strong>On Time!</strong> 
+                    No fine will be charged.
+                </div>`}
+                
+                <div class="text-center">
+                    <button type="submit" class="btn btn-success btn-lg">
+                        <i class="bi bi-check-circle me-2"></i>Confirm Return
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// Simulate barcode scan
+function simulateScan() {
+    // Generate a realistic transaction code
+    const today = new Date();
+    const timestamp = today.getFullYear() + 
+                     String(today.getMonth()+1).padStart(2,'0') + 
+                     String(today.getDate()).padStart(2,'0');
+    const randomStr = Math.random().toString(36).substring(2, 8).toUpperCase();
+    const scannedCode = `TRN${timestamp}${randomStr}`;
+    
+    document.getElementById('transactionCode').value = scannedCode;
+    
+    // Show notification
+    showToast(`Scanned code: ${scannedCode}`, 'success');
+    
+    // Auto-fetch after scan
+    setTimeout(() => {
+        fetchTransaction();
+    }, 800);
+}
+
+// Use transaction code from overdue list
+function useTransactionCode(code) {
+    document.getElementById('transactionCode').value = code;
+    showToast(`Transaction code filled: ${code}`, 'info');
+    setTimeout(() => {
+        fetchTransaction();
+    }, 800);
+}
+
+// Show toast notification
+function showToast(message, type = 'info') {
+    // Create toast element
+    const toastEl = document.createElement('div');
+    toastEl.className = `toast align-items-center text-white bg-${type === 'success' ? 'success' : 'primary'} border-0`;
+    toastEl.setAttribute('role', 'alert');
+    toastEl.setAttribute('aria-live', 'assertive');
+    toastEl.setAttribute('aria-atomic', 'true');
+    
+    toastEl.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">
+                <i class="bi ${type === 'success' ? 'bi-check-circle' : 'bi-info-circle'} me-2"></i>
+                ${message}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    `;
+    
+    // Add to container
+    const toastContainer = document.createElement('div');
+    toastContainer.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+    toastContainer.appendChild(toastEl);
+    document.body.appendChild(toastContainer);
+    
+    // Initialize and show toast
+    const toast = new bootstrap.Toast(toastEl, { delay: 3000 });
+    toast.show();
+    
+    // Remove after hiding
+    toastEl.addEventListener('hidden.bs.toast', function () {
+        document.body.removeChild(toastContainer);
+    });
+}
+
+// Check URL for transaction code parameter
+document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+    if (code) {
+        document.getElementById('transactionCode').value = code;
+        setTimeout(() => {
+            fetchTransaction();
+        }, 1000);
+    }
+});
+
+// Form submission confirmation
+document.getElementById('returnForm').addEventListener('submit', function(e) {
+    const transactionCode = document.getElementById('transactionCode').value;
+    if (!transactionCode) {
+        e.preventDefault();
+        alert('Please enter a transaction code');
+        return;
+    }
+    
+    const confirmReturn = confirm(`Are you sure you want to return the book for transaction: ${transactionCode}?`);
+    if (!confirmReturn) {
+        e.preventDefault();
+    }
+});
+</script>
+
+<style>
+.toast-container {
+    z-index: 9999;
+}
+
+.card {
+    transition: transform 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,485 @@
+{% extends "base.html" %}
+
+{% block title %}Bulk Import Books - Library System{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2><i class="bi bi-upload me-2"></i>Bulk Import Books</h2>
+            <p class="text-muted">Import multiple books from Excel/CSV file</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Upload Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-cloud-upload me-2"></i>Upload Excel/CSV File</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('import_books') }}" enctype="multipart/form-data" id="importForm">
+                        <div class="mb-4">
+                            <label class="form-label">Select File *</label>
+                            <div class="input-group">
+                                <input type="file" class="form-control" name="file" id="fileInput" 
+                                       accept=".xlsx,.xls,.csv" required>
+                                <button class="btn btn-outline-secondary" type="button" onclick="downloadTemplate()">
+                                    <i class="bi bi-download me-1"></i>Template
+                                </button>
+                            </div>
+                            <small class="text-muted">
+                                Supported formats: Excel (.xlsx, .xls) or CSV (.csv). Max file size: 10MB
+                            </small>
+                        </div>
+
+                        <!-- File Preview -->
+                        <div id="filePreview" style="display: none;">
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle me-2"></i>
+                                <strong>File loaded:</strong> <span id="fileName"></span>
+                                (<span id="fileSize"></span>)
+                            </div>
+                            
+                            <div class="mb-3">
+                                <h6>Data Preview (First 5 rows):</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-bordered" id="previewTable">
+                                        <thead id="previewHeader"></thead>
+                                        <tbody id="previewBody"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Import Options -->
+                        <div class="card mb-3">
+                            <div class="card-header">
+                                <h6 class="mb-0">Import Options</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Import Mode</label>
+                                        <select class="form-select" name="import_mode">
+                                            <option value="add">Add New Books Only</option>
+                                            <option value="update">Update Existing Books (by ISBN)</option>
+                                            <option value="replace">Replace All Books</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Default Category</label>
+                                        <select class="form-select" name="default_category">
+                                            <option value="">Use from file</option>
+                                            {% for category in categories %}
+                                            <option value="{{ category.category_name }}">{{ category.category_name }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" name="skip_errors" id="skipErrors">
+                                    <label class="form-check-label" for="skipErrors">
+                                        Skip rows with errors and continue
+                                    </label>
+                                </div>
+                                
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" name="send_email" id="sendEmail">
+                                    <label class="form-check-label" for="sendEmail">
+                                        Send email notification when complete
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Required Fields -->
+                        <div class="alert alert-warning">
+                            <h6><i class="bi bi-exclamation-triangle me-2"></i>Required Fields</h6>
+                            <p class="mb-0">
+                                <strong>Mandatory:</strong> ISBN, Title, Author<br>
+                                <strong>Optional:</strong> Publisher, Publication Year, Category, Price, Total Copies<br>
+                                <strong>Note:</strong> ISBN must be unique. If ISBN exists, book will be updated.
+                            </p>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg" id="importBtn" disabled>
+                                <i class="bi bi-upload me-2"></i>Start Import
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <!-- Instructions -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Instructions</h5>
+                </div>
+                <div class="card-body">
+                    <h6>File Format Requirements:</h6>
+                    <ol class="mb-3">
+                        <li>First row should contain column headers</li>
+                        <li>Use the exact column names from template</li>
+                        <li>ISBN must be unique for each book</li>
+                        <li>Price should be in numeric format</li>
+                        <li>Publication year should be 4 digits</li>
+                    </ol>
+
+                    <h6>Column Mapping:</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Column in File</th>
+                                    <th>Field in Database</th>
+                                    <th>Required</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>isbn</td>
+                                    <td>ISBN</td>
+                                    <td><span class="badge bg-danger">Yes</span></td>
+                                </tr>
+                                <tr>
+                                    <td>title</td>
+                                    <td>Book Title</td>
+                                    <td><span class="badge bg-danger">Yes</span></td>
+                                </tr>
+                                <tr>
+                                    <td>author</td>
+                                    <td>Author Name</td>
+                                    <td><span class="badge bg-danger">Yes</span></td>
+                                </tr>
+                                <tr>
+                                    <td>publisher</td>
+                                    <td>Publisher</td>
+                                    <td><span class="badge bg-warning">No</span></td>
+                                </tr>
+                                <tr>
+                                    <td>publication_year</td>
+                                    <td>Publication Year</td>
+                                    <td><span class="badge bg-warning">No</span></td>
+                                </tr>
+                                <tr>
+                                    <td>category</td>
+                                    <td>Category</td>
+                                    <td><span class="badge bg-warning">No</span></td>
+                                </tr>
+                                <tr>
+                                    <td>total_copies</td>
+                                    <td>Total Copies</td>
+                                    <td><span class="badge bg-warning">No</span></td>
+                                </tr>
+                                <tr>
+                                    <td>price</td>
+                                    <td>Price (₹)</td>
+                                    <td><span class="badge bg-warning">No</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="alert alert-success mt-3">
+                        <h6><i class="bi bi-lightbulb me-2"></i>Quick Tips</h6>
+                        <ul class="mb-0">
+                            <li>Start with small files (100-200 books)</li>
+                            <li>Always download and use the template</li>
+                            <li>Validate ISBN numbers before import</li>
+                            <li>Keep backup of your existing data</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Imports -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>Recent Imports</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        {% for import in recent_imports %}
+                        <div class="list-group-item">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">{{ import.filename }}</h6>
+                                <small class="text-muted">{{ import.date.strftime('%d/%m') }}</small>
+                            </div>
+                            <p class="mb-1">
+                                <small>Status: 
+                                    {% if import.status == 'Completed' %}
+                                    <span class="badge bg-success">Success</span>
+                                    {% elif import.status == 'Failed' %}
+                                    <span class="badge bg-danger">Failed</span>
+                                    {% else %}
+                                    <span class="badge bg-warning">{{ import.status }}</span>
+                                    {% endif %}
+                                </small>
+                            </p>
+                            <small class="text-muted">
+                                {{ import.records_processed }} records | 
+                                By: {{ import.imported_by }}
+                            </small>
+                        </div>
+                        {% else %}
+                        <div class="list-group-item text-center text-muted py-4">
+                            <i class="bi bi-upload display-6 d-block mb-2"></i>
+                            No recent imports
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Progress Modal -->
+<div class="modal fade" id="progressModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Importing Books</h5>
+            </div>
+            <div class="modal-body">
+                <div class="text-center mb-3">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+                <p class="text-center mb-2" id="progressText">Processing file...</p>
+                <div class="progress mb-3" style="height: 20px;">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                         id="importProgress" style="width: 0%"></div>
+                </div>
+                <div id="importDetails">
+                    <small class="text-muted">Preparing import...</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.table th {
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.progress {
+    border-radius: 10px;
+}
+
+.progress-bar {
+    border-radius: 10px;
+}
+
+.card {
+    transition: transform 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+</style>
+
+<script>
+// File upload handler
+document.getElementById('fileInput').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    // Validate file size (10MB max)
+    if (file.size > 10 * 1024 * 1024) {
+        alert('File size exceeds 10MB limit');
+        this.value = '';
+        return;
+    }
+    
+    // Show file info
+    document.getElementById('fileName').textContent = file.name;
+    document.getElementById('fileSize').textContent = formatFileSize(file.size);
+    document.getElementById('filePreview').style.display = 'block';
+    document.getElementById('importBtn').disabled = false;
+    
+    // Preview file content
+    if (file.name.endsWith('.csv')) {
+        previewCSV(file);
+    } else if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+        previewExcel(file);
+    }
+});
+
+// Format file size
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+// Preview CSV file
+function previewCSV(file) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const content = e.target.result;
+        const lines = content.split('\n').slice(0, 6); // First 6 lines
+        const headers = lines[0].split(',');
+        const rows = lines.slice(1, 6);
+        
+        displayPreview(headers, rows);
+    };
+    reader.readAsText(file);
+}
+
+// Preview Excel file (using SheetJS library - would need to include it)
+function previewExcel(file) {
+    // For simplicity, we'll just show a message
+    // In production, you would use SheetJS or similar library
+    document.getElementById('previewHeader').innerHTML = `
+        <tr>
+            <th colspan="3" class="text-center">
+                <i class="bi bi-file-earmark-excel me-2"></i>
+                Excel file selected. Preview will be shown after upload.
+            </th>
+        </tr>
+    `;
+    document.getElementById('previewBody').innerHTML = '';
+}
+
+// Display preview table
+function displayPreview(headers, rows) {
+    let headerHTML = '<tr>';
+    headers.forEach(header => {
+        headerHTML += `<th>${header.trim()}</th>`;
+    });
+    headerHTML += '</tr>';
+    document.getElementById('previewHeader').innerHTML = headerHTML;
+    
+    let bodyHTML = '';
+    rows.forEach(row => {
+        if (row.trim()) {
+            bodyHTML += '<tr>';
+            const cells = row.split(',');
+            cells.forEach(cell => {
+                bodyHTML += `<td>${cell.trim()}</td>`;
+            });
+            bodyHTML += '</tr>';
+        }
+    });
+    document.getElementById('previewBody').innerHTML = bodyHTML;
+}
+
+// Download template
+function downloadTemplate() {
+    // Create a simple CSV template
+    const template = `isbn,title,author,publisher,publication_year,category,total_copies,price,shelf_location,language,description
+978-81-234-1234-5,Introduction to Computer Science,Rajesh Kumar,Pearson India,2020,Computer Science,5,450.00,CS-A-12,English,Basic computer science concepts
+978-93-5118-456-9,Indian History,Meera Sharma,Oxford University Press,2019,History,3,350.00,HIS-B-05,English,Complete history of India
+978-81-7756-789-0,Mathematics for Engineers,Vikram Singh,McGraw Hill,2021,Mathematics,4,550.00,MATH-C-08,English,Engineering mathematics`;
+
+    const blob = new Blob([template], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'book_import_template.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+}
+
+// Form submission with progress
+document.getElementById('importForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    
+    // Show progress modal
+    const modal = new bootstrap.Modal(document.getElementById('progressModal'));
+    modal.show();
+    
+    // Update progress
+    let progress = 0;
+    const progressInterval = setInterval(() => {
+        progress += 5;
+        document.getElementById('importProgress').style.width = progress + '%';
+        
+        if (progress >= 90) {
+            clearInterval(progressInterval);
+        }
+    }, 500);
+    
+    // Submit form via AJAX
+    fetch(this.action, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        clearInterval(progressInterval);
+        document.getElementById('importProgress').style.width = '100%';
+        
+        if (data.success) {
+            document.getElementById('progressText').textContent = 'Import Completed!';
+            document.getElementById('importDetails').innerHTML = `
+                <div class="alert alert-success">
+                    <i class="bi bi-check-circle me-2"></i>
+                    <strong>Success!</strong> ${data.message}
+                </div>
+            `;
+            
+            setTimeout(() => {
+                modal.hide();
+                location.reload();
+            }, 2000);
+        } else {
+            document.getElementById('progressText').textContent = 'Import Failed';
+            document.getElementById('importDetails').innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-circle me-2"></i>
+                    <strong>Error:</strong> ${data.message}
+                    ${data.errors ? `<br><small>${data.errors.join('<br>')}</small>` : ''}
+                </div>
+            `;
+        }
+    })
+    .catch(error => {
+        clearInterval(progressInterval);
+        document.getElementById('progressText').textContent = 'Import Failed';
+        document.getElementById('importDetails').innerHTML = `
+            <div class="alert alert-danger">
+                <i class="bi bi-exclamation-circle me-2"></i>
+                <strong>Network Error:</strong> ${error.message}
+            </div>
+        `;
+    });
+});
+
+// Sample recent imports data
+const sampleImports = [
+    {
+        filename: 'library_books.csv',
+        date: new Date(),
+        status: 'Completed',
+        records_processed: 125,
+        imported_by: '{{ current_user.full_name }}'
+    },
+    {
+        filename: 'college_books.xlsx',
+        date: new Date(Date.now() - 86400000), // Yesterday
+        status: 'Completed',
+        records_processed: 89,
+        imported_by: 'Admin'
+    }
+];
+</script>
+{% endblock %}
